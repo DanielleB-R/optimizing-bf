@@ -49,6 +49,13 @@ impl BFSyntax {
 
         Ok(result)
     }
+
+    pub fn is_loop(&self) -> bool {
+        match self {
+            BFSyntax::Loop(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

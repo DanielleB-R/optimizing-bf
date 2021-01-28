@@ -8,8 +8,15 @@ fn coalesce_constants(input: Vec<BFSyntax>) -> Vec<BFSyntax> {
         match instruction {
             BFSyntax::Root(_) => unimplemented!(),
             BFSyntax::Read => {
-                if let Some(inst) = current.take() {
-                    result.push(inst);
+                match current.take() {
+                    // Read will clobber the results of these
+                    Some(BFSyntax::Inc(_))
+                    | Some(BFSyntax::Dec(_))
+                    | Some(BFSyntax::Set(_))
+                    | None => {}
+                    Some(inst) => {
+                        result.push(inst);
+                    }
                 }
                 result.push(BFSyntax::Read);
             }
@@ -152,6 +159,55 @@ pub fn optimize_zeroing_loops(input: BFSyntax) -> BFSyntax {
     }
 }
 
+pub fn strip_dead_loops(input: BFSyntax) -> BFSyntax {
+    match input {
+        BFSyntax::Root(insts) => {
+            let mut last_is_loop = false;
+            BFSyntax::Root(
+                insts
+                    .into_iter()
+                    .skip_while(BFSyntax::is_loop)
+                    .filter_map(|inst| {
+                        if inst.is_loop() {
+                            if last_is_loop {
+                                None
+                            } else {
+                                last_is_loop = true;
+                                Some(strip_dead_loops(inst))
+                            }
+                        } else {
+                            last_is_loop = false;
+                            Some(inst)
+                        }
+                    })
+                    .collect(),
+            )
+        }
+        BFSyntax::Loop(insts) => {
+            let mut last_is_loop = false;
+            BFSyntax::Loop(
+                insts
+                    .into_iter()
+                    .filter_map(|inst| {
+                        if inst.is_loop() {
+                            if last_is_loop {
+                                None
+                            } else {
+                                last_is_loop = true;
+                                Some(strip_dead_loops(inst))
+                            }
+                        } else {
+                            last_is_loop = false;
+                            Some(inst)
+                        }
+                    })
+                    .collect(),
+            )
+        }
+        inst => inst,
+    }
+}
+
 pub fn perform_all(input: BFSyntax) -> BFSyntax {
-    fold_adjacent_constants(optimize_zeroing_loops(input))
+    fold_adjacent_constants(optimize_zeroing_loops(strip_dead_loops(input)))
 }
