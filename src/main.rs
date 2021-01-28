@@ -9,7 +9,7 @@ fn main() {
     let program_text = read_to_string(filename).unwrap();
 
     let program = tokenize(&program_text);
-    let program_syntax: BFSyntax = optimize::fold_adjacent_constants(program.try_into().unwrap());
+    let program_syntax: BFSyntax = optimize::perform_all(program.try_into().unwrap());
 
     let mut machine = Machine::new();
     machine.execute(

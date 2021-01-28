@@ -145,6 +145,9 @@ impl Machine {
             BFSyntax::Dec(n) => {
                 self.cells[self.position] = self.cells[self.position].wrapping_sub(n);
             }
+            BFSyntax::Set(n) => {
+                self.cells[self.position] = n;
+            }
             BFSyntax::Read => {
                 self.cells[self.position] = read_byte(input);
             }

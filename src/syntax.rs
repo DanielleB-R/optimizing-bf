@@ -11,6 +11,7 @@ pub enum BFSyntax {
     Loop(Vec<BFSyntax>),
     Read,
     Write,
+    Set(u8),
 }
 
 impl TryFrom<Vec<BFToken>> for BFSyntax {

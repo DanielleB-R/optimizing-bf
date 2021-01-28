@@ -37,7 +37,10 @@ fn coalesce_constants(input: Vec<BFSyntax>) -> Vec<BFSyntax> {
                         BFSyntax::Inc(n - m)
                     } else {
                         BFSyntax::Dec(m - n)
-                    })
+                    });
+                }
+                Some(BFSyntax::Set(m)) => {
+                    current = Some(BFSyntax::Set(n.wrapping_add(m)));
                 }
                 Some(inst) => {
                     result.push(inst);
@@ -58,11 +61,27 @@ fn coalesce_constants(input: Vec<BFSyntax>) -> Vec<BFSyntax> {
                         BFSyntax::Inc(m - n)
                     })
                 }
+                Some(BFSyntax::Set(m)) => {
+                    current = Some(BFSyntax::Set(n.wrapping_sub(m)));
+                }
                 Some(inst) => {
                     result.push(inst);
                     current = Some(BFSyntax::Dec(n));
                 }
             },
+            BFSyntax::Set(n) => {
+                match current.take() {
+                    // discard the saved instruction if it alters the current cell since the result is overwritten
+                    Some(BFSyntax::Dec(_))
+                    | Some(BFSyntax::Inc(_))
+                    | Some(BFSyntax::Set(_))
+                    | None => {}
+                    Some(inst) => {
+                        result.push(inst);
+                    }
+                }
+                current = Some(BFSyntax::Set(n));
+            }
             BFSyntax::Right(n) => match current.take() {
                 None => {
                     current = Some(BFSyntax::Right(n));
@@ -115,4 +134,24 @@ pub fn fold_adjacent_constants(input: BFSyntax) -> BFSyntax {
         return BFSyntax::Root(coalesce_constants(instructions));
     }
     unimplemented!();
+}
+
+pub fn optimize_zeroing_loops(input: BFSyntax) -> BFSyntax {
+    match input {
+        BFSyntax::Root(insts) => {
+            BFSyntax::Root(insts.into_iter().map(optimize_zeroing_loops).collect())
+        }
+        BFSyntax::Loop(insts) => {
+            if insts.len() == 1 && insts[0] == BFSyntax::Dec(1) {
+                BFSyntax::Set(0)
+            } else {
+                BFSyntax::Loop(insts.into_iter().map(optimize_zeroing_loops).collect())
+            }
+        }
+        inst => inst,
+    }
+}
+
+pub fn perform_all(input: BFSyntax) -> BFSyntax {
+    fold_adjacent_constants(optimize_zeroing_loops(input))
 }
